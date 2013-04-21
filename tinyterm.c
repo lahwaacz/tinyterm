@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include <glib.h>
+#include <sys/wait.h>
 #include <gdk/gdkkeysyms.h>
 #include <vte/vte.h>
 #include "config.h"
@@ -130,7 +131,7 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
 
     /* Create pty object */
     VtePty* pty = vte_terminal_pty_new(vte, VTE_PTY_NO_HELPER | VTE_PTY_NO_FALLBACK, &error);
-    if (!pty) {
+    if (error) {
         g_printerr("Failed to create pty: %s\n", error->message);
         g_error_free(error);
         exit(EXIT_FAILURE);
@@ -164,6 +165,14 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
     }
     vte_terminal_watch_child(vte, ppid);
     g_strfreev(command_argv);
+}
+
+static void
+vte_exit_cb(VteTerminal* vte)
+{
+    int status = vte_terminal_get_child_exit_status(vte);
+    gtk_main_quit();
+    exit(WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE);
 }
 
 static void
@@ -215,7 +224,7 @@ main (int argc, char* argv[])
 
     /* Create vte terminal widget */
     GtkWidget* vte_widget = vte_terminal_new();
-    g_signal_connect(vte_widget, "child-exited", gtk_main_quit, NULL);
+    g_signal_connect(vte_widget, "child-exited", G_CALLBACK (vte_exit_cb), NULL);
     g_signal_connect(vte_widget, "key-press-event", G_CALLBACK (on_key_press), NULL);
     gtk_box_pack_start(GTK_BOX (box), vte_widget, TRUE, TRUE, 0);
     VteTerminal* vte = VTE_TERMINAL (vte_widget);
