@@ -28,45 +28,29 @@
 #include <glib.h>
 #include <gdk/gdkkeysyms.h>
 #include <vte/vte.h>
-#include <wordexp.h>
 #include "config.h"
 
 static void
-xdg_open_selection_cb (GtkClipboard *clipboard, const char* string, gpointer data)
+xdg_open(const char* string)
 {
-    char* command;
-    wordexp_t result;
-    int ret;
     GError* error = NULL;
-
-    command = g_strconcat("xdg-open ", string, NULL);
-    ret = wordexp(command, &result, WRDE_NOCMD);
-    switch (ret) {
-        case 0:
-            g_spawn_async(NULL, result.we_wordv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error);
-            if (error) {
-                g_printerr("xdg-open: %s\n", error->message);
-                g_error_free(error);
-            }
-            break;
-        case WRDE_BADCHAR:
-            g_printerr("'%s' contains an invalid character\n", string);
-            break;
-        case WRDE_CMDSUB:
-            g_printerr("'%s' uses command substitution, which is not allowed\n", string);
-            break;
-        case WRDE_NOSPACE:
-            g_printerr("Could not allocate enough memory when parsing '%s'\n", string);
-            break;
-        case WRDE_SYNTAX:
-            g_printerr("Syntax error in '%s'\n", string);
-            break;
+    char* command = g_strconcat("xdg-open ", string, NULL);
+    g_spawn_command_line_async(command, &error);
+    if (error) {
+        g_printerr("xdg-open: %s\n", error->message);
+        g_error_free(error);
     }
-    wordfree(&result);
+    g_free(command);
 }
 
 static void
-xdg_open_selection (GtkWidget* terminal)
+xdg_open_selection_cb(GtkClipboard* clipboard, const char* string, gpointer data)
+{
+    xdg_open(string);
+}
+
+static void
+xdg_open_selection(GtkWidget* terminal)
 {
     GdkDisplay* display;
     GtkClipboard* clipboard;
@@ -78,9 +62,9 @@ xdg_open_selection (GtkWidget* terminal)
 }
 
 static gboolean
-on_key_press (GtkWidget* terminal, GdkEventKey* event)
+on_key_press(GtkWidget* terminal, GdkEventKey* event)
 {
-    if ((event->state & TINYTERM_MODIFIERS) == (TINYTERM_MODIFIERS)) {
+    if ((event->state & (TINYTERM_MODIFIERS)) == (TINYTERM_MODIFIERS)) {
         switch (event->keyval) {
             case GDK_C:
                 vte_terminal_copy_clipboard(VTE_TERMINAL (terminal));
@@ -145,7 +129,7 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
     char** command_argv = NULL;
 
     /* Create pty object */
-    VtePty* pty = vte_terminal_pty_new(vte, (VTE_PTY_NO_HELPER | VTE_PTY_NO_FALLBACK), &error);
+    VtePty* pty = vte_terminal_pty_new(vte, VTE_PTY_NO_HELPER | VTE_PTY_NO_FALLBACK, &error);
     if (!pty) {
         g_printerr("Failed to create pty: %s\n", error->message);
         g_error_free(error);
@@ -236,13 +220,6 @@ main (int argc, char* argv[])
     gtk_box_pack_start(GTK_BOX (box), vte_widget, TRUE, TRUE, 0);
     VteTerminal* vte = VTE_TERMINAL (vte_widget);
 
-    /* Show scrollbar */
-    #ifdef TINYTERM_SCROLLBAR_VISIBLE
-    GtkWidget* scrollbar;
-    scrollbar = gtk_vscrollbar_new(vte->adjustment);
-    gtk_box_pack_start(GTK_BOX (box), scrollbar, FALSE, FALSE, 0);
-    #endif // TINYTERM_SCROLLBAR_VISIBLE
-
     /* Apply geometry hints to handle terminal resizing */
     geo_hints.base_width  = vte->char_width;
     geo_hints.base_height = vte->char_height;
@@ -253,6 +230,13 @@ main (int argc, char* argv[])
     gtk_window_set_geometry_hints(GTK_WINDOW (window), vte_widget, &geo_hints,
                                   GDK_HINT_RESIZE_INC | GDK_HINT_MIN_SIZE | GDK_HINT_BASE_SIZE);
 
+    /* Create scrollbar */
+    #ifdef TINYTERM_SCROLLBAR_VISIBLE
+    GtkWidget* scrollbar;
+    scrollbar = gtk_vscrollbar_new(vte->adjustment);
+    gtk_box_pack_start(GTK_BOX (box), scrollbar, FALSE, FALSE, 0);
+    #endif // TINYTERM_SCROLLBAR_VISIBLE
+
     vte_config(vte);
     vte_spawn(vte, directory, command, NULL);
     g_free(command);
@@ -262,5 +246,5 @@ main (int argc, char* argv[])
     gtk_widget_show_all(window);
     gtk_main();
 
-    return 0;
+    return EXIT_SUCCESS;
 }

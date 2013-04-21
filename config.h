@@ -29,7 +29,7 @@
 
 /* Modifier keys for copy/paste/execute callbacks */
 /* http://www.gtk.org/api/2.6/gdk/gdk-Windows.html#GdkModifierType */
-#define TINYTERM_MODIFIERS      (GDK_CONTROL_MASK | GDK_SHIFT_MASK)
+#define TINYTERM_MODIFIERS      GDK_CONTROL_MASK | GDK_SHIFT_MASK
 
 /* Terminal emulation (value of $TERM) (default: xterm) */
 #define TINYTERM_TERMINFO 		"xterm-256color"
