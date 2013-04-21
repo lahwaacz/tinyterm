@@ -37,32 +37,30 @@ xdg_open_selection_cb (GtkClipboard *clipboard, const char* string, gpointer dat
     char* command;
     wordexp_t result;
     int ret;
-    gboolean spawn;
     GError* error = NULL;
 
     command = g_strconcat("xdg-open ", string, NULL);
     ret = wordexp(command, &result, WRDE_NOCMD);
-    if (ret == 0) {
-        spawn = g_spawn_async(NULL, result.we_wordv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error);
-        if (!spawn) {
-            g_printerr("%s\n", error->message);
-            g_error_free(error);
-        }
-    } else {
-        switch (ret) {
-            case WRDE_BADCHAR:
-                g_printerr("'%s' contains an invalid character\n", string);
-                break;
-            case WRDE_CMDSUB:
-                g_printerr("'%s' uses command substitution, which is not allowed\n", string);
-                break;
-            case WRDE_NOSPACE:
-                g_printerr("Could not allocate enough memory when parsing '%s'\n", string);
-                break;
-            case WRDE_SYNTAX:
-                g_printerr("Syntax error in '%s'\n", string);
-                break;
-        }
+    switch (ret) {
+        case 0:
+            g_spawn_async(NULL, result.we_wordv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error);
+            if (error) {
+                g_printerr("xdg-open: %s\n", error->message);
+                g_error_free(error);
+            }
+            break;
+        case WRDE_BADCHAR:
+            g_printerr("'%s' contains an invalid character\n", string);
+            break;
+        case WRDE_CMDSUB:
+            g_printerr("'%s' uses command substitution, which is not allowed\n", string);
+            break;
+        case WRDE_NOSPACE:
+            g_printerr("Could not allocate enough memory when parsing '%s'\n", string);
+            break;
+        case WRDE_SYNTAX:
+            g_printerr("Syntax error in '%s'\n", string);
+            break;
     }
     wordfree(&result);
 }
@@ -139,47 +137,85 @@ vte_config(VteTerminal* vte)
                             16);
 }
 
-void
-vte_spawn(VteTerminal* vte, char* working_directory, char** command_argv, char** environment)
+static void
+vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** environment)
 {
     GError* error = NULL;
     GPid ppid;
+    char** command_argv = NULL;
 
     /* Create pty object */
     VtePty* pty = vte_terminal_pty_new(vte, (VTE_PTY_NO_HELPER | VTE_PTY_NO_FALLBACK), &error);
     if (!pty) {
         g_printerr("Failed to create pty: %s\n", error->message);
         g_error_free(error);
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
     vte_pty_set_term(pty, TINYTERM_TERMINFO);
     vte_terminal_set_pty_object(vte, pty);
 
-    /* Spawn default shell (or specified command) */
-    gboolean spawn = g_spawn_async(working_directory,   // working directory (NULL=CWD)
-                                   command_argv,        // arguments
-                                   environment,         // environment
-                                   (G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH | G_SPAWN_LEAVE_DESCRIPTORS_OPEN),  // flags from GSpawnFlags
-                                   vte_pty_child_setup, // an extra child setup function to run in the child just before exec()
-                                   pty,     // user data for child_setup
-                                   &ppid,   // a location to store the child PID
-                                   &error); // return location for a GError
-    if (!spawn) {
-        g_printerr("The command failed to run: %s\n", error->message);
+    /* Parse command into array */
+    if (!command)
+        command = vte_get_user_shell();
+    g_shell_parse_argv(command, NULL, &command_argv, &error);
+    if (error) {
+        g_printerr("Failed to parse command: %s\n", error->message);
         g_error_free(error);
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
+    }
+
+    /* Spawn default shell (or specified command) */
+    g_spawn_async(working_directory,   // working directory (NULL=CWD)
+                  command_argv,        // arguments
+                  environment,         // environment
+                  (G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH | G_SPAWN_LEAVE_DESCRIPTORS_OPEN),  // flags from GSpawnFlags
+                  (GSpawnChildSetupFunc)vte_pty_child_setup, // an extra child setup function to run in the child just before exec()
+                  pty,     // user data for child_setup
+                  &ppid,   // a location to store the child PID
+                  &error); // return location for a GError
+    if (error) {
+        g_printerr("%s\n", error->message);
+        g_error_free(error);
+        exit(EXIT_FAILURE);
     }
     vte_terminal_watch_child(vte, ppid);
+    g_strfreev(command_argv);
+}
+
+static void
+parse_arguments(int argc, char* argv[], char** command, char** directory)
+{
+    GError* error = NULL;
+
+    GOptionContext* context = g_option_context_new(NULL);
+    g_option_context_set_help_enabled(context, TRUE);
+    const GOptionEntry entries[] = {
+        {"execute",   'e', 0, G_OPTION_ARG_STRING, command,   "Execute command instead of default shell.", "COMMAND"},
+        {"directory", 'd', 0, G_OPTION_ARG_STRING, directory, "Sets the working directory for the shell (or the command specified via -e).", "PATH"},
+        { NULL }
+    };
+    g_option_context_add_main_entries(context, entries, NULL);
+    g_option_context_parse(context, &argc, &argv, &error);
+    if (error) {
+        g_printerr("option parsing failed: %s\n", error->message);
+        g_error_free(error);
+        exit(EXIT_FAILURE);
+    }
+    g_option_context_free(context);
 }
 
 int
 main (int argc, char* argv[])
 {
-    GtkWidget *window, *box;
+    GtkWidget* window;
+    GtkWidget* box;
     GdkPixbuf* icon;
     GdkGeometry geo_hints;
+    char* command = NULL;
+    char* directory = NULL;
 
     gtk_init(&argc, &argv);
+    parse_arguments(argc, argv, &command, &directory);
 
     /* Create window */
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -217,12 +253,10 @@ main (int argc, char* argv[])
     gtk_window_set_geometry_hints(GTK_WINDOW (window), vte_widget, &geo_hints,
                                   GDK_HINT_RESIZE_INC | GDK_HINT_MIN_SIZE | GDK_HINT_BASE_SIZE);
 
-    // TODO: ability to specify custom command using -e flag
-    char* command_argv[2]={0,0};
-    command_argv[0]=vte_get_user_shell();
-
     vte_config(vte);
-    vte_spawn(vte, NULL, command_argv, NULL);
+    vte_spawn(vte, directory, command, NULL);
+    g_free(command);
+    g_free(directory);
 
     /* Show widgets and run main loop */
     gtk_widget_show_all(window);
