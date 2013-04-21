@@ -63,18 +63,41 @@ xdg_open_selection(GtkWidget* terminal)
 }
 
 static gboolean
-on_key_press(GtkWidget* terminal, GdkEventKey* event)
+key_press_cb(GtkWidget* terminal, GdkEventKey* event)
 {
-    if ((event->state & (TINYTERM_MODIFIERS)) == (TINYTERM_MODIFIERS)) {
-        switch (event->keyval) {
-            case GDK_C:
-                vte_terminal_copy_clipboard(VTE_TERMINAL (terminal));
+    static gboolean url_select_mode = FALSE;
+    VteTerminal* vte = VTE_TERMINAL (terminal);
+
+    if (url_select_mode) {
+        switch (gdk_keyval_to_upper(event->keyval)) {
+            case TINYTERM_KEY_URL_NEXT:
+                vte_terminal_search_find_next(vte);
                 return TRUE;
-            case GDK_V:
-                vte_terminal_paste_clipboard(VTE_TERMINAL (terminal));
+            case TINYTERM_KEY_URL_PREV:
+                vte_terminal_search_find_previous(vte);
                 return TRUE;
-            case GDK_X:
+            case GDK_Return:
                 xdg_open_selection(terminal);
+            case GDK_Escape:
+                vte_terminal_select_none(vte);
+                url_select_mode = FALSE;
+                return TRUE;
+        }
+        return TRUE;
+    }
+    if ((event->state & (TINYTERM_MODIFIERS)) == (TINYTERM_MODIFIERS)) {
+        switch (gdk_keyval_to_upper(event->keyval)) {
+            case TINYTERM_KEY_COPY:
+                vte_terminal_copy_clipboard(vte);
+                return TRUE;
+            case TINYTERM_KEY_PASTE:
+                vte_terminal_paste_clipboard(vte);
+                return TRUE;
+            case TINYTERM_KEY_OPEN:
+                xdg_open_selection(terminal);
+                return TRUE;
+            case TINYTERM_KEY_URL_INIT:
+                url_select_mode = vte_terminal_search_find_previous(vte);
                 return TRUE;
         }
     }
@@ -86,7 +109,10 @@ vte_config(VteTerminal* vte)
 {
     GdkColor color_fg, color_bg;
     GdkColor color_palette[16];
+    GRegex* regex = g_regex_new(url_regex, G_REGEX_CASELESS, G_REGEX_MATCH_NOTEMPTY, NULL);
 
+    vte_terminal_search_set_gregex(vte, regex);
+    vte_terminal_search_set_wrap_around     (vte, TINYTERM_SEARCH_WRAP_AROUND);
     vte_terminal_set_audible_bell           (vte, TINYTERM_AUDIBLE_BELL);
     vte_terminal_set_visible_bell           (vte, TINYTERM_VISIBLE_BELL);
     vte_terminal_set_cursor_shape           (vte, TINYTERM_CURSOR_SHAPE);
@@ -130,7 +156,7 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
     char** command_argv = NULL;
 
     /* Create pty object */
-    VtePty* pty = vte_terminal_pty_new(vte, VTE_PTY_NO_HELPER | VTE_PTY_NO_FALLBACK, &error);
+    VtePty* pty = vte_terminal_pty_new(vte, VTE_PTY_NO_HELPER, &error);
     if (error) {
         g_printerr("Failed to create pty: %s\n", error->message);
         g_error_free(error);
@@ -225,7 +251,7 @@ main (int argc, char* argv[])
     /* Create vte terminal widget */
     GtkWidget* vte_widget = vte_terminal_new();
     g_signal_connect(vte_widget, "child-exited", G_CALLBACK (vte_exit_cb), NULL);
-    g_signal_connect(vte_widget, "key-press-event", G_CALLBACK (on_key_press), NULL);
+    g_signal_connect(vte_widget, "key-press-event", G_CALLBACK (key_press_cb), NULL);
     gtk_box_pack_start(GTK_BOX (box), vte_widget, TRUE, TRUE, 0);
     VteTerminal* vte = VTE_TERMINAL (vte_widget);
 

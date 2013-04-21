@@ -27,18 +27,18 @@
 /* Path to window icon */
 #define TINYTERM_ICON_PATH      "/usr/local/share/pixmaps/tinyterm.png"
 
-/* Modifier keys for copy/paste/execute callbacks */
-/* http://www.gtk.org/api/2.6/gdk/gdk-Windows.html#GdkModifierType */
-#define TINYTERM_MODIFIERS      GDK_CONTROL_MASK | GDK_SHIFT_MASK
-
 /* Terminal emulation (value of $TERM) (default: xterm) */
-#define TINYTERM_TERMINFO 		"xterm-256color"
+#define TINYTERM_TERMINFO       "xterm-256color"
 
-/* Uncomment to show scrollbar */
-//#define TINYTERM_SCROLLBAR_VISIBLE
-
+//#define TINYTERM_SCROLLBAR_VISIBLE    // uncomment to show scrollbar
+#define TINYTERM_SCROLLBACK_LINES   10000
+#define TINYTERM_SEARCH_WRAP_AROUND TRUE
 #define TINYTERM_AUDIBLE_BELL   FALSE
 #define TINYTERM_VISIBLE_BELL   FALSE
+#define TINYTERM_FONT       "monospace 9"
+
+/* One of VTE_ANTI_ALIAS_USE_DEFAULT, VTE_ANTI_ALIAS_FORCE_ENABLE, VTE_ANTI_ALIAS_FORCE_DISABLE */
+#define TINYTERM_ANTIALIAS  VTE_ANTI_ALIAS_FORCE_ENABLE
 
 /* One of VTE_CURSOR_SHAPE_BLOCK, VTE_CURSOR_SHAPE_IBEAM, VTE_CURSOR_SHAPE_UNDERLINE */
 #define TINYTERM_CURSOR_SHAPE    VTE_CURSOR_SHAPE_BLOCK
@@ -48,15 +48,6 @@
 
 /* Selection behavior for double-clicks */
 #define TINYTERM_WORD_CHARS "-A-Za-z0-9:./?%&#_=+@~"
-
-/* Number of lines to save in scrollback buffer */
-#define TINYTERM_SCROLLBACK_LINES   10000
-
-/* Font description */
-#define TINYTERM_FONT       "monospace 9"
-
-/* One of VTE_ANTI_ALIAS_USE_DEFAULT, VTE_ANTI_ALIAS_FORCE_ENABLE, VTE_ANTI_ALIAS_FORCE_DISABLE */
-#define TINYTERM_ANTIALIAS  VTE_ANTI_ALIAS_FORCE_ENABLE
 
 /* Custom color scheme */
 #define TINYTERM_COLOR_BACKGROUND   "#000000"
@@ -113,3 +104,24 @@
 ///* white */
 //#define TINYTERM_COLOR7      "#e5e5e5"
 //#define TINYTERM_COLOR15     "#ffffff"
+
+/* Keyboard shortcuts */
+// Modifier keys for copy/paste/open callbacks
+// http://www.gtk.org/api/2.6/gdk/gdk-Windows.html#GdkModifierType
+#define TINYTERM_MODIFIERS      GDK_CONTROL_MASK | GDK_SHIFT_MASK
+#define TINYTERM_KEY_COPY       GDK_C
+#define TINYTERM_KEY_PASTE      GDK_V
+#define TINYTERM_KEY_OPEN       GDK_X   // pass selected text to xdg-open
+#define TINYTERM_KEY_URL_INIT   GDK_U
+#define TINYTERM_KEY_URL_NEXT   GDK_J   // only in url select mode, not matched against modifier
+#define TINYTERM_KEY_URL_PREV   GDK_K   // only in url select mode, not matched against modifier
+
+/* Regular expression matching urls */
+#define SPECIAL_CHARS   "[[:alnum:]\\Q-,?;.:/!%$^*&~#\\E]"
+#define SCHEME          "(?:[[:alpha:]][+-.[:alpha:]]*://)"
+#define USERINFO        "(?:[[:alnum:]]+(?:" SPECIAL_CHARS "+)?\\@)?"
+#define HOST            "(?:[[:alnum:]](?:[[:alnum:]-]+\\.)*[[:alpha:]]{2,})"
+#define PORT            "(?:\\:[[:digit:]]{1,5})?"
+#define URLPATH         "(?:/" SPECIAL_CHARS "*)?"
+
+const char * const url_regex = SCHEME USERINFO HOST PORT URLPATH;
