@@ -31,11 +31,14 @@
 #include <vte/vte.h>
 #include "config.h"
 
+static gboolean url_select_mode = FALSE;
+
+/* spawn xdg-open and pass text as argument */
 static void
-xdg_open(const char* string)
+xdg_open(const char* text)
 {
     GError* error = NULL;
-    char* command = g_strconcat("xdg-open ", string, NULL);
+    char* command = g_strconcat("xdg-open ", text, NULL);
     g_spawn_command_line_async(command, &error);
     if (error) {
         g_printerr("xdg-open: %s\n", error->message);
@@ -44,30 +47,27 @@ xdg_open(const char* string)
     g_free(command);
 }
 
+/* callback to receive data from GtkClipboard */
 static void
 xdg_open_selection_cb(GtkClipboard* clipboard, const char* string, gpointer data)
 {
     xdg_open(string);
 }
 
+/* pass selected text to xdg-open */
 static void
 xdg_open_selection(GtkWidget* terminal)
 {
-    GdkDisplay* display;
-    GtkClipboard* clipboard;
-
+    GdkDisplay* display = gtk_widget_get_display(terminal);;
+    GtkClipboard* clipboard = gtk_clipboard_get_for_display(display, GDK_SELECTION_PRIMARY);
     vte_terminal_copy_primary(VTE_TERMINAL (terminal));
-    display = gtk_widget_get_display(terminal);
-    clipboard = gtk_clipboard_get_for_display(display, GDK_SELECTION_PRIMARY);
     gtk_clipboard_request_text(clipboard, xdg_open_selection_cb, NULL);
 }
 
+/* callback to react to key press events */
 static gboolean
-key_press_cb(GtkWidget* terminal, GdkEventKey* event)
+key_press_cb(VteTerminal* vte, GdkEventKey* event)
 {
-    static gboolean url_select_mode = FALSE;
-    VteTerminal* vte = VTE_TERMINAL (terminal);
-
     if (url_select_mode) {
         switch (gdk_keyval_to_upper(event->keyval)) {
             case TINYTERM_KEY_URL_NEXT:
@@ -77,7 +77,7 @@ key_press_cb(GtkWidget* terminal, GdkEventKey* event)
                 vte_terminal_search_find_previous(vte);
                 return TRUE;
             case GDK_Return:
-                xdg_open_selection(terminal);
+                xdg_open_selection(vte);
             case GDK_Escape:
                 vte_terminal_select_none(vte);
                 url_select_mode = FALSE;
@@ -94,13 +94,22 @@ key_press_cb(GtkWidget* terminal, GdkEventKey* event)
                 vte_terminal_paste_clipboard(vte);
                 return TRUE;
             case TINYTERM_KEY_OPEN:
-                xdg_open_selection(terminal);
+                xdg_open_selection(vte);
                 return TRUE;
             case TINYTERM_KEY_URL_INIT:
                 url_select_mode = vte_terminal_search_find_previous(vte);
                 return TRUE;
         }
     }
+    return FALSE;
+}
+
+/* callback to block mouse when in url-select mode */
+static gboolean
+button_press_cb(VteTerminal* vte, GdkEventButton* event)
+{
+    if (url_select_mode)
+        return TRUE;
     return FALSE;
 }
 
@@ -193,6 +202,7 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
     g_strfreev(command_argv);
 }
 
+/* callback to exit TinyTerm with exit status of child process */
 static void
 vte_exit_cb(VteTerminal* vte)
 {
@@ -202,15 +212,15 @@ vte_exit_cb(VteTerminal* vte)
 }
 
 static void
-parse_arguments(int argc, char* argv[], char** command, char** directory)
+parse_arguments(int argc, char* argv[], char** command, char** directory, gboolean* keep)
 {
     GError* error = NULL;
-
     GOptionContext* context = g_option_context_new(NULL);
     g_option_context_set_help_enabled(context, TRUE);
     const GOptionEntry entries[] = {
         {"execute",   'e', 0, G_OPTION_ARG_STRING, command,   "Execute command instead of default shell.", "COMMAND"},
         {"directory", 'd', 0, G_OPTION_ARG_STRING, directory, "Sets the working directory for the shell (or the command specified via -e).", "PATH"},
+        {"keep",        0, 0, G_OPTION_ARG_NONE,   keep,      "Don't exit the terminal after child process exits.", 0},
         { NULL }
     };
     g_option_context_add_main_entries(context, entries, NULL);
@@ -230,11 +240,14 @@ main (int argc, char* argv[])
     GtkWidget* box;
     GdkPixbuf* icon;
     GdkGeometry geo_hints;
+
+    /* Variables for parsed command-line arguments */
     char* command = NULL;
     char* directory = NULL;
+    gboolean keep = FALSE;
 
     gtk_init(&argc, &argv);
-    parse_arguments(argc, argv, &command, &directory);
+    parse_arguments(argc, argv, &command, &directory, &keep);
 
     /* Create window */
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -250,10 +263,14 @@ main (int argc, char* argv[])
 
     /* Create vte terminal widget */
     GtkWidget* vte_widget = vte_terminal_new();
-    g_signal_connect(vte_widget, "child-exited", G_CALLBACK (vte_exit_cb), NULL);
-    g_signal_connect(vte_widget, "key-press-event", G_CALLBACK (key_press_cb), NULL);
     gtk_box_pack_start(GTK_BOX (box), vte_widget, TRUE, TRUE, 0);
     VteTerminal* vte = VTE_TERMINAL (vte_widget);
+    if (!keep)
+        g_signal_connect(vte, "child-exited", G_CALLBACK (vte_exit_cb), NULL);
+    g_signal_connect(vte, "key-press-event", G_CALLBACK (key_press_cb), NULL);
+    #ifdef TINYTERM_URL_BLOCK_MOUSE
+    g_signal_connect(vte, "button-press-event", G_CALLBACK (button_press_cb), NULL);
+    #endif // TINYTERM_URL_BLOCK_MOUSE
 
     /* Apply geometry hints to handle terminal resizing */
     geo_hints.base_width  = vte->char_width;

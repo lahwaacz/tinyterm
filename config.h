@@ -30,21 +30,22 @@
 /* Terminal emulation (value of $TERM) (default: xterm) */
 #define TINYTERM_TERMINFO       "xterm-256color"
 
+#define TINYTERM_URL_BLOCK_MOUSE        // uncomment to block mouse (button-press events) in url-select mode
 //#define TINYTERM_SCROLLBAR_VISIBLE    // uncomment to show scrollbar
 #define TINYTERM_SCROLLBACK_LINES   10000
 #define TINYTERM_SEARCH_WRAP_AROUND TRUE
 #define TINYTERM_AUDIBLE_BELL   FALSE
 #define TINYTERM_VISIBLE_BELL   FALSE
-#define TINYTERM_FONT       "monospace 9"
+#define TINYTERM_FONT           "monospace 9"
 
 /* One of VTE_ANTI_ALIAS_USE_DEFAULT, VTE_ANTI_ALIAS_FORCE_ENABLE, VTE_ANTI_ALIAS_FORCE_DISABLE */
-#define TINYTERM_ANTIALIAS  VTE_ANTI_ALIAS_FORCE_ENABLE
+#define TINYTERM_ANTIALIAS      VTE_ANTI_ALIAS_FORCE_ENABLE
 
 /* One of VTE_CURSOR_SHAPE_BLOCK, VTE_CURSOR_SHAPE_IBEAM, VTE_CURSOR_SHAPE_UNDERLINE */
-#define TINYTERM_CURSOR_SHAPE    VTE_CURSOR_SHAPE_BLOCK
+#define TINYTERM_CURSOR_SHAPE   VTE_CURSOR_SHAPE_BLOCK
 
 /* One of VTE_CURSOR_BLINK_SYSTEM, VTE_CURSOR_BLINK_ON, VTE_CURSOR_BLINK_OFF */
-#define TINYTERM_CURSOR_BLINK    VTE_CURSOR_BLINK_OFF
+#define TINYTERM_CURSOR_BLINK   VTE_CURSOR_BLINK_OFF
 
 /* Selection behavior for double-clicks */
 #define TINYTERM_WORD_CHARS "-A-Za-z0-9:./?%&#_=+@~"
@@ -117,7 +118,7 @@
 #define TINYTERM_KEY_URL_PREV   GDK_K   // only in url select mode, not matched against modifier
 
 /* Regular expression matching urls */
-#define SPECIAL_CHARS   "[[:alnum:]\\Q-,?;.:/!%$^*&~#\\E]"
+#define SPECIAL_CHARS   "[[:alnum:]\\Q+-,?;.:/!%$^*&~#=\\E]"
 #define SCHEME          "(?:[[:alpha:]][+-.[:alpha:]]*://)"
 #define USERINFO        "(?:[[:alnum:]]+(?:" SPECIAL_CHARS "+)?\\@)?"
 #define HOST            "(?:[[:alnum:]](?:[[:alnum:]-]+\\.)*[[:alpha:]]{2,})"

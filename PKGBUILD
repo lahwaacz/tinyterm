@@ -2,7 +2,7 @@
 
 pkgname=tinyterm-git
 _pkgname=tinyterm
-pkgver=v0.1beta
+pkgver=v0.1beta.2.g456990c
 pkgrel=1
 pkgdesc="Very lightweight terminal emulator based on VTE (fork of tinyterm-svn package)"
 arch=('i686' 'x86_64')
