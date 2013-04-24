@@ -85,7 +85,7 @@ key_press_cb(VteTerminal* vte, GdkEventKey* event)
         }
         return TRUE;
     }
-    if ((event->state & (TINYTERM_MODIFIERS)) == (TINYTERM_MODIFIERS)) {
+    if ((event->state & (TINYTERM_MODIFIER)) == (TINYTERM_MODIFIER)) {
         switch (gdk_keyval_to_upper(event->keyval)) {
             case TINYTERM_KEY_COPY:
                 vte_terminal_copy_clipboard(vte);

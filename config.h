@@ -107,18 +107,16 @@
 //#define TINYTERM_COLOR15     "#ffffff"
 
 /* Keyboard shortcuts */
-// Modifier keys for copy/paste/open callbacks
-// http://www.gtk.org/api/2.6/gdk/gdk-Windows.html#GdkModifierType
-#define TINYTERM_MODIFIERS      GDK_CONTROL_MASK | GDK_SHIFT_MASK
+#define TINYTERM_MODIFIER       GDK_CONTROL_MASK | GDK_SHIFT_MASK
 #define TINYTERM_KEY_COPY       GDK_C
 #define TINYTERM_KEY_PASTE      GDK_V
-#define TINYTERM_KEY_OPEN       GDK_X   // pass selected text to xdg-open
+#define TINYTERM_KEY_OPEN       GDK_O   // pass selected text to xdg-open
 #define TINYTERM_KEY_URL_INIT   GDK_U
 #define TINYTERM_KEY_URL_NEXT   GDK_J   // only in url select mode, not matched against modifier
 #define TINYTERM_KEY_URL_PREV   GDK_K   // only in url select mode, not matched against modifier
 
 /* Regular expression matching urls */
-#define SPECIAL_CHARS   "[[:alnum:]\\Q+-,?;.:/!%$^*&~#=\\E]"
+#define SPECIAL_CHARS   "[[:alnum:]\\Q+-_,?;.:/!%$^*&~#=\\E]"
 #define SCHEME          "(?:[[:alpha:]][+-.[:alpha:]]*://)"
 #define USERINFO        "(?:[[:alnum:]]+(?:" SPECIAL_CHARS "+)?\\@)?"
 #define HOST            "(?:[[:alnum:]](?:[[:alnum:]-]+\\.)*[[:alpha:]]{2,})"
