@@ -150,11 +150,7 @@ vte_config(VteTerminal* vte)
     gdk_color_parse(TINYTERM_COLOR14, &color_palette[14]);
     gdk_color_parse(TINYTERM_COLOR15, &color_palette[15]);
 
-    vte_terminal_set_colors(vte,
-                            &color_fg,
-                            &color_bg,
-                            &color_palette,
-                            16);
+    vte_terminal_set_colors(vte, &color_fg, &color_bg, &color_palette, 16);
 }
 
 static void
@@ -163,16 +159,6 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
     GError* error = NULL;
     GPid ppid;
     char** command_argv = NULL;
-
-    /* Create pty object */
-    VtePty* pty = vte_terminal_pty_new(vte, VTE_PTY_NO_HELPER, &error);
-    if (error) {
-        g_printerr("Failed to create pty: %s\n", error->message);
-        g_error_free(error);
-        exit(EXIT_FAILURE);
-    }
-    vte_pty_set_term(pty, TINYTERM_TERMINFO);
-    vte_terminal_set_pty_object(vte, pty);
 
     /* Parse command into array */
     if (!command)
@@ -184,10 +170,18 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
         exit(EXIT_FAILURE);
     }
 
+    /* Create pty object */
+    VtePty* pty = vte_terminal_pty_new(vte, VTE_PTY_NO_HELPER, &error);
+    if (error) {
+        g_printerr("Failed to create pty: %s\n", error->message);
+        g_error_free(error);
+        exit(EXIT_FAILURE);
+    }
+    vte_pty_set_term(pty, TINYTERM_TERMINFO);
+    vte_terminal_set_pty_object(vte, pty);
+
     /* Spawn default shell (or specified command) */
-    g_spawn_async(working_directory,   // working directory (NULL=CWD)
-                  command_argv,        // arguments
-                  environment,         // environment
+    g_spawn_async(working_directory, command_argv, environment,
                   (G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH | G_SPAWN_LEAVE_DESCRIPTORS_OPEN),  // flags from GSpawnFlags
                   (GSpawnChildSetupFunc)vte_pty_child_setup, // an extra child setup function to run in the child just before exec()
                   pty,     // user data for child_setup
@@ -214,23 +208,32 @@ vte_exit_cb(VteTerminal* vte)
 static void
 parse_arguments(int argc, char* argv[], char** command, char** directory, gboolean* keep)
 {
-    GError* error = NULL;
-    GOptionContext* context = g_option_context_new(NULL);
-    g_option_context_set_help_enabled(context, TRUE);
+    gboolean version = FALSE;   // show version?
     const GOptionEntry entries[] = {
+        {"version",   'V', 0, G_OPTION_ARG_NONE,   &version,  "Display program version and exit.", 0},
         {"execute",   'e', 0, G_OPTION_ARG_STRING, command,   "Execute command instead of default shell.", "COMMAND"},
         {"directory", 'd', 0, G_OPTION_ARG_STRING, directory, "Sets the working directory for the shell (or the command specified via -e).", "PATH"},
         {"keep",        0, 0, G_OPTION_ARG_NONE,   keep,      "Don't exit the terminal after child process exits.", 0},
         { NULL }
     };
+
+    GError* error = NULL;
+    GOptionContext* context = g_option_context_new(NULL);
+    g_option_context_set_help_enabled(context, TRUE);
     g_option_context_add_main_entries(context, entries, NULL);
     g_option_context_parse(context, &argc, &argv, &error);
+    g_option_context_free(context);
+
     if (error) {
         g_printerr("option parsing failed: %s\n", error->message);
         g_error_free(error);
         exit(EXIT_FAILURE);
     }
-    g_option_context_free(context);
+
+    if (version) {
+        g_print("tinyterm " TINYTERM_VERSION "\n");
+        exit(EXIT_SUCCESS);
+    }
 }
 
 int

@@ -119,7 +119,7 @@
 #define SPECIAL_CHARS   "[[:alnum:]\\Q+-_,?;.:/!%$^*&~#=\\E]"
 #define SCHEME          "(?:[[:alpha:]][+-.[:alpha:]]*://)"
 #define USERINFO        "(?:[[:alnum:]]+(?:" SPECIAL_CHARS "+)?\\@)?"
-#define HOST            "(?:[[:alnum:]](?:[[:alnum:]-]+\\.)*[[:alpha:]]{2,})"
+#define HOST            "(?:(?:[[:alnum:]-]+\\.)*[[:alpha:]]{2,})"
 #define PORT            "(?:\\:[[:digit:]]{1,5})?"
 #define URLPATH         "(?:/" SPECIAL_CHARS "*)?"
 

@@ -1,9 +1,13 @@
-NAME = TinyTerm
-VERSION = 0.1
+V=1
+VDEVEL=$(shell test -d .git && git describe 2>/dev/null)
+
+ifneq "$(VDEVEL)" ""
+V=$(VDEVEL)
+endif
 
 CC := $(CC) -std=c99
 
-base_CFLAGS = -Wall -Wextra -pedantic -O2 -g -DPROGNAME=\"${NAME}\" -DVERSION=\"${VERSION}\"
+base_CFLAGS = -Wall -Wextra -pedantic -O2 -g -DTINYTERM_VERSION=\"$(V)\"
 base_LIBS = -lm
 
 pkgs = vte
