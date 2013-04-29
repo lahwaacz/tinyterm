@@ -64,6 +64,13 @@ xdg_open_selection(GtkWidget* terminal)
     gtk_clipboard_request_text(clipboard, xdg_open_selection_cb, NULL);
 }
 
+/* callback to dynamically change window title */
+static void
+window_title_cb(VteTerminal* vte)
+{
+    gtk_window_set_title(GTK_WINDOW (gtk_widget_get_toplevel(GTK_WIDGET(vte))), vte_terminal_get_window_title(vte));
+}
+
 /* callback to react to key press events */
 static gboolean
 key_press_cb(VteTerminal* vte, GdkEventKey* event)
@@ -274,6 +281,9 @@ main (int argc, char* argv[])
     #ifdef TINYTERM_URL_BLOCK_MOUSE
     g_signal_connect(vte, "button-press-event", G_CALLBACK (button_press_cb), NULL);
     #endif // TINYTERM_URL_BLOCK_MOUSE
+    #ifdef TINYTERM_DYNAMIC_WINDOW_TITLE
+    g_signal_connect(vte, "window-title-changed", G_CALLBACK (window_title_cb), NULL);
+    #endif // TINYTERM_DYNAMIC_WINDOW_TITLE
 
     /* Apply geometry hints to handle terminal resizing */
     geo_hints.base_width  = vte->char_width;
