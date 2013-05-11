@@ -31,6 +31,7 @@
 #define TINYTERM_TERMINFO       "xterm-256color"
 
 #define TINYTERM_DYNAMIC_WINDOW_TITLE   // uncomment to enable window_title_cb
+#define TINYTERM_URGENT_ON_BELL         // uncomment to enable window_urgency_hint_cb
 #define TINYTERM_URL_BLOCK_MOUSE        // uncomment to block mouse (button-press events) in url-select mode
 //#define TINYTERM_SCROLLBAR_VISIBLE    // uncomment to show scrollbar
 #define TINYTERM_SCROLLBACK_LINES   10000

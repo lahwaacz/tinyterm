@@ -64,11 +64,26 @@ xdg_open_selection(GtkWidget* terminal)
     gtk_clipboard_request_text(clipboard, xdg_open_selection_cb, NULL);
 }
 
+/* callback to set window urgency hint on beep events */
+static void
+window_urgency_hint_cb(VteTerminal* vte)
+{
+    gtk_window_set_urgency_hint(GTK_WINDOW (gtk_widget_get_toplevel(GTK_WIDGET (vte))), TRUE);
+}
+
+/* callback to unset window urgency hint on focus */
+gboolean
+window_focus_cb(GtkWindow* window)
+{
+    gtk_window_set_urgency_hint(window, FALSE);
+    return FALSE;
+}
+
 /* callback to dynamically change window title */
 static void
 window_title_cb(VteTerminal* vte)
 {
-    gtk_window_set_title(GTK_WINDOW (gtk_widget_get_toplevel(GTK_WIDGET(vte))), vte_terminal_get_window_title(vte));
+    gtk_window_set_title(GTK_WINDOW (gtk_widget_get_toplevel(GTK_WIDGET (vte))), vte_terminal_get_window_title(vte));
 }
 
 /* callback to react to key press events */
@@ -278,6 +293,11 @@ main (int argc, char* argv[])
     if (!keep)
         g_signal_connect(vte, "child-exited", G_CALLBACK (vte_exit_cb), NULL);
     g_signal_connect(vte, "key-press-event", G_CALLBACK (key_press_cb), NULL);
+    #ifdef TINYTERM_URGENT_ON_BELL
+    g_signal_connect(vte, "beep", G_CALLBACK (window_urgency_hint_cb), NULL);
+    g_signal_connect(window, "focus-in-event",  G_CALLBACK (window_focus_cb), NULL);
+    g_signal_connect(window, "focus-out-event", G_CALLBACK (window_focus_cb), NULL);
+    #endif // TINYTERM_URGENT_ON_BELL
     #ifdef TINYTERM_URL_BLOCK_MOUSE
     g_signal_connect(vte, "button-press-event", G_CALLBACK (button_press_cb), NULL);
     #endif // TINYTERM_URL_BLOCK_MOUSE
