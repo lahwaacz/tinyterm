@@ -118,7 +118,7 @@
 #define TINYTERM_KEY_URL_PREV   GDK_K   // only in url select mode, not matched against modifier
 
 /* Regular expression matching urls */
-#define SPECIAL_CHARS   "[[:alnum:]\\Q+-_,?;.:/!%$^*&~#=\\E]"
+#define SPECIAL_CHARS   "[[:alnum:]\\Q+-_,?;.:/!%$^*&~#=()\\E]"
 #define SCHEME          "(?:[[:alpha:]][+-.[:alpha:]]*://)"
 #define USERINFO        "(?:[[:alnum:]]+(?:" SPECIAL_CHARS "+)?\\@)?"
 #define HOST            "(?:(?:[[:alnum:]-]+\\.)*[[:alpha:]]{2,})"
