@@ -228,14 +228,16 @@ vte_exit_cb(VteTerminal* vte)
 }
 
 static void
-parse_arguments(int argc, char* argv[], char** command, char** directory, gboolean* keep)
+parse_arguments(int argc, char* argv[], char** command, char** directory, gboolean* keep, char** name, char** title)
 {
     gboolean version = FALSE;   // show version?
     const GOptionEntry entries[] = {
-        {"version",   'V', 0, G_OPTION_ARG_NONE,   &version,  "Display program version and exit.", 0},
-        {"execute",   'e', 0, G_OPTION_ARG_STRING, command,   "Execute command instead of default shell.", "COMMAND"},
-        {"directory", 'd', 0, G_OPTION_ARG_STRING, directory, "Sets the working directory for the shell (or the command specified via -e).", "PATH"},
-        {"keep",        0, 0, G_OPTION_ARG_NONE,   keep,      "Don't exit the terminal after child process exits.", 0},
+        {"version",   'v', 0, G_OPTION_ARG_NONE,    &version,   "Display program version and exit.", 0},
+        {"execute",   'e', 0, G_OPTION_ARG_STRING,  command,    "Execute command instead of default shell.", "COMMAND"},
+        {"directory", 'd', 0, G_OPTION_ARG_STRING,  directory,  "Sets the working directory for the shell (or the command specified via -e).", "PATH"},
+        {"keep",      'k', 0, G_OPTION_ARG_NONE,    keep,       "Don't exit the terminal after child process exits.", 0},
+        {"name",      'n', 0, G_OPTION_ARG_STRING,  name,       "Set first value of WM_CLASS property; second value is always 'TinyTerm' (default: 'tinyterm')", "NAME"},
+        {"title",     't', 0, G_OPTION_ARG_STRING,  title,      "Set value of WM_NAME property; disables window_title_cb (default: 'TinyTerm')", "TITLE"},
         { NULL }
     };
 
@@ -270,14 +272,17 @@ main (int argc, char* argv[])
     char* command = NULL;
     char* directory = NULL;
     gboolean keep = FALSE;
+    char* name = NULL;
+    char* title = NULL;
 
     gtk_init(&argc, &argv);
-    parse_arguments(argc, argv, &command, &directory, &keep);
+    parse_arguments(argc, argv, &command, &directory, &keep, &name, &title);
 
     /* Create window */
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     g_signal_connect(window, "delete-event", gtk_main_quit, NULL);
-    gtk_window_set_title(GTK_WINDOW (window), "TinyTerm");
+    gtk_window_set_wmclass(GTK_WINDOW (window), name ? name : "tinyterm", "TinyTerm");
+    gtk_window_set_title(GTK_WINDOW (window), title ? title : "TinyTerm");
     icon = gdk_pixbuf_new_from_file(TINYTERM_ICON_PATH, NULL);
     if (icon)
         gtk_window_set_icon(GTK_WINDOW (window), icon);
@@ -302,7 +307,8 @@ main (int argc, char* argv[])
     g_signal_connect(vte, "button-press-event", G_CALLBACK (button_press_cb), NULL);
     #endif // TINYTERM_URL_BLOCK_MOUSE
     #ifdef TINYTERM_DYNAMIC_WINDOW_TITLE
-    g_signal_connect(vte, "window-title-changed", G_CALLBACK (window_title_cb), NULL);
+    if (!title)
+        g_signal_connect(vte, "window-title-changed", G_CALLBACK (window_title_cb), NULL);
     #endif // TINYTERM_DYNAMIC_WINDOW_TITLE
 
     /* Apply geometry hints to handle terminal resizing */
@@ -324,8 +330,12 @@ main (int argc, char* argv[])
 
     vte_config(vte);
     vte_spawn(vte, directory, command, NULL);
+
+    /* cleanup */
     g_free(command);
     g_free(directory);
+    g_free(name);
+    g_free(title);
 
     /* Show widgets and run main loop */
     gtk_widget_show_all(window);
