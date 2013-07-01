@@ -29,9 +29,11 @@
 #include <sys/wait.h>
 #include <gdk/gdkkeysyms.h>
 #include <vte/vte.h>
+#include <signal.h>
 #include "config.h"
 
 static gboolean url_select_mode = FALSE;
+static int child_pid = 0;   // needs to be global for signal_handler to work
 
 /* spawn xdg-open and pass text as argument */
 static void
@@ -179,7 +181,6 @@ static void
 vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** environment)
 {
     GError* error = NULL;
-    GPid ppid;
     char** command_argv = NULL;
 
     /* Parse command into array */
@@ -206,15 +207,15 @@ vte_spawn(VteTerminal* vte, char* working_directory, char* command, char** envir
     g_spawn_async(working_directory, command_argv, environment,
                   (G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH | G_SPAWN_LEAVE_DESCRIPTORS_OPEN),  // flags from GSpawnFlags
                   (GSpawnChildSetupFunc)vte_pty_child_setup, // an extra child setup function to run in the child just before exec()
-                  pty,     // user data for child_setup
-                  &ppid,   // a location to store the child PID
-                  &error); // return location for a GError
+                  pty,          // user data for child_setup
+                  &child_pid,   // a location to store the child PID
+                  &error);      // return location for a GError
     if (error) {
         g_printerr("%s\n", error->message);
         g_error_free(error);
         exit(EXIT_FAILURE);
     }
-    vte_terminal_watch_child(vte, ppid);
+    vte_terminal_watch_child(vte, child_pid);
     g_strfreev(command_argv);
 }
 
@@ -258,6 +259,15 @@ parse_arguments(int argc, char* argv[], char** command, char** directory, gboole
         g_print("tinyterm " TINYTERM_VERSION "\n");
         exit(EXIT_SUCCESS);
     }
+}
+
+/* UNIX signal handler */
+static void
+signal_handler(int signal)
+{
+    if (child_pid != 0)
+        kill(child_pid, SIGHUP);
+    exit(signal);
 }
 
 int
@@ -330,6 +340,11 @@ main (int argc, char* argv[])
 
     vte_config(vte);
     vte_spawn(vte, directory, command, NULL);
+
+    /* register signal handler */
+    signal(SIGHUP, signal_handler);
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     /* cleanup */
     g_free(command);
