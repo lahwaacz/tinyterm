@@ -125,4 +125,4 @@
 #define PORT            "(?:\\:[[:digit:]]{1,5})?"
 #define URLPATH         "(?:/" SPECIAL_CHARS "*)?"
 
-const char * const url_regex = SCHEME USERINFO HOST PORT URLPATH;
+const char * const url_regex = SCHEME USERINFO HOST PORT URLPATH "(?<!\\.)";
