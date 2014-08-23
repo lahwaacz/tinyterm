@@ -293,6 +293,8 @@ main (int argc, char* argv[])
     /* Get icon theme */
     icon_theme = gtk_icon_theme_get_default();
     icon = gtk_icon_theme_load_icon(icon_theme, "terminal", 48, 0, &error);
+    if (error)
+        g_error_free(error);
 
     /* Create window */
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
