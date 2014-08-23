@@ -24,9 +24,6 @@
  *
  */
 
-/* Path to window icon */
-#define TINYTERM_ICON_PATH      "/usr/share/pixmaps/tinyterm.png"
-
 /* Terminal emulation (value of $TERM) (default: xterm) */
 #define TINYTERM_TERMINFO       "xterm-256color"
 

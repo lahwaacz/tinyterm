@@ -277,6 +277,8 @@ main (int argc, char* argv[])
     GtkWidget* box;
     GdkPixbuf* icon;
     GdkGeometry geo_hints;
+    GtkIconTheme *icon_theme;
+    GError *error = NULL;
 
     /* Variables for parsed command-line arguments */
     char* command = NULL;
@@ -288,12 +290,15 @@ main (int argc, char* argv[])
     gtk_init(&argc, &argv);
     parse_arguments(argc, argv, &command, &directory, &keep, &name, &title);
 
+    /* Get icon theme */
+    icon_theme = gtk_icon_theme_get_default();
+    icon = gtk_icon_theme_load_icon(icon_theme, "terminal", 48, 0, &error);
+
     /* Create window */
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     g_signal_connect(window, "delete-event", gtk_main_quit, NULL);
     gtk_window_set_wmclass(GTK_WINDOW (window), name ? name : "tinyterm", "TinyTerm");
     gtk_window_set_title(GTK_WINDOW (window), title ? title : "TinyTerm");
-    icon = gdk_pixbuf_new_from_file(TINYTERM_ICON_PATH, NULL);
     if (icon)
         gtk_window_set_icon(GTK_WINDOW (window), icon);
 
