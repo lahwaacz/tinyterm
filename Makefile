@@ -26,4 +26,3 @@ clean:
 
 install: tinyterm
 	install -Dm755 tinyterm $(DESTDIR)/usr/bin/tinyterm
-	install -Dm644 tinyterm.png $(DESTDIR)/usr/share/pixmaps/tinyterm.png
