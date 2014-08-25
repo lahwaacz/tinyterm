@@ -1,8 +1,8 @@
-# Maintainer: Jakub Klinkovský <kuba.klinkovsky@gmail.com>
+# Maintainer: Jakub Klinkovský <j.l.k@gmx.com>
 
 pkgname=tinyterm-git
 _pkgname=tinyterm
-pkgver=v0.1beta.6.g25da896
+pkgver=0.2.6.ga28969d
 pkgrel=1
 pkgdesc="Very lightweight terminal emulator based on VTE (fork of tinyterm-svn package)"
 arch=('i686' 'x86_64')
@@ -15,7 +15,7 @@ md5sums=('SKIP')
 
 pkgver() {
   cd "$_pkgname"
-  git describe --always | sed 's|-|.|g'
+  git describe --long --tags | sed 's|^v||;s|-|.|g'
 }
 
 build() {
